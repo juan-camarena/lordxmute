@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LordxMute</title>
+  <style>
+    :root {
+      --bg0: #09090d;
+      --bg1: #0f0f13;
+      --bg2: #15151e;
+      --bg3: #1c1c28;
+      --bg4: #232334;
+      --ac: #7c3aed;
+      --ac2: #6d28d9;
+      --ac3: #a78bfa;
+      --ac4: #4c1d95;
+      --tp: #ededf5;
+      --ts: #8b89a8;
+      --tm: #3d3b52;
+      --bdr: #2a2840;
+      --ok: #34d399;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg0); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--bg3); border: 1px solid var(--bdr); border-radius: 10px;
+      padding: 10px 22px; font-size: 13px; color: var(--tp);
+      opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.ok   { border-color: var(--ok);    color: var(--ok); }
+    #toast.err  { border-color: var(--danger); color: var(--danger); }
+
+    /* ── Connection banner ── */
+    #conn-banner {
+      display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 998;
+      background: var(--danger); color: white; font-size: 12px; font-weight: 600;
+      text-align: center; padding: 6px; letter-spacing: .05em;
+    }
+    #conn-banner.show { display: block; }
+
+    .app-frame {
+      background: var(--bg1);
+      border: 1px solid var(--bdr);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      width: calc(100vw - 80px);
+      height: calc(100vh - 80px);
+      max-width: 1200px;
+      max-height: 860px;
+      margin: 40px auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    }
+
+    .titlebar {
+      background: var(--bg0);
+      height: 42px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--bdr);
+    }
+    .tb-dots { display: flex; gap: 7px; }
+    .tb-dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
+    .d-close { background: #ff5f57; }
+    .d-min   { background: #febc2e; }
+    .d-max   { background: #28c840; }
+    .tb-title { flex: 1; text-align: center; font-size: 12px; color: var(--ts); letter-spacing: .04em; }
+    .tb-right { width: 60px; }
+
+    .accent-line { height: 2px; background: var(--ac); flex-shrink: 0; }
+
+    .mobile-bar {
+      display: none;
+      background: var(--bg0);
+      border-bottom: 1px solid var(--bdr);
+      padding: 14px 18px;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .mobile-logo { font-size: 15px; font-weight: 600; color: var(--tp); }
+    .mobile-mute-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--bg3); border: 1.5px solid var(--ac);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      transition: background .2s, border-color .2s;
+    }
+    .mobile-mute-btn.active { background: var(--ac4); border-color: var(--danger); }
+
+    .body-wrap { display: flex; flex: 1; overflow: hidden; }
+
+    .sidebar {
+      width: 250px;
+      background: var(--bg0);
+      border-right: 1px solid var(--bdr);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      padding: 28px 0 20px;
+    }
+    .logo-area { padding: 0 22px 24px; border-bottom: 1px solid var(--bdr); }
+    .logo-name { font-size: 18px; font-weight: 600; color: var(--tp); letter-spacing: -.02em; }
+    .logo-sub  { font-size: 12px; color: var(--ts); margin-top: 3px; }
+
+    .mute-area {
+      padding: 32px 22px;
+      display: flex; flex-direction: column; align-items: center;
+      border-bottom: 1px solid var(--bdr);
+    }
+    .mute-btn {
+      width: 110px; height: 110px; border-radius: 50%;
+      background: var(--bg3); border: 2px solid var(--ac);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; position: relative;
+      transition: border-color .2s, background .2s;
+    }
+    .mute-btn:hover { border-color: var(--ac3); }
+    .mute-btn.active { background: var(--ac4); border-color: var(--danger); }
+    .mute-btn svg { width: 40px; height: 40px; }
+    .mute-ring { position: absolute; inset: -9px; border-radius: 50%; border: 1px solid var(--ac); opacity: .2; pointer-events:none;}
+    .mute-label { margin-top: 16px; font-size: 11px; color: var(--ts); text-transform: uppercase; letter-spacing: .1em; transition: color .3s; }
+    .mute-key   { margin-top: 5px; font-size: 14px; color: var(--ac3); font-weight: 600; }
+
+    .status-area { padding: 22px; display: flex; flex-direction: column; gap: 14px; border-bottom: 1px solid var(--bdr); }
+    .stat-row  { display: flex; align-items: center; gap: 10px; }
+    .stat-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; transition: background .3s; }
+    .stat-dot.green { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+    .stat-dot.amber { background: var(--warn); }
+    .stat-dot.red   { background: var(--danger); }
+    .stat-label { font-size: 13px; color: var(--ts); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-val   { font-size: 12px; transition: color .3s; }
+
+    .sidebar-nav { margin-top: 16px; padding: 0 12px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-item {
+      padding: 10px 14px; border-radius: 7px;
+      font-size: 14px; font-weight: 500; color: var(--ts); cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-item:hover  { background: var(--bg3); color: var(--tp); }
+    .nav-item.active { background: var(--ac4); color: var(--ac3); }
+    .nav-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+    .main {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 0; display: flex;
+      flex-direction: column;
+      background: var(--bg1);
+      scrollbar-width: thin;
+      scrollbar-color: var(--ac) var(--bg2);
+    }
+    .main::-webkit-scrollbar { width: 4px; }
+    .main::-webkit-scrollbar-track { background: var(--bg2); }
+    .main::-webkit-scrollbar-thumb { background: var(--ac); border-radius: 99px; }
+
+    .page-content { padding: 32px; display: flex; flex-direction: column; gap: 18px; }
+
+    .section { background: var(--bg2); border: 1px solid var(--bdr); border-radius: 10px; overflow: hidden; }
+    .section-head {
+      background: var(--bg4); padding: 12px 18px;
+      border-bottom: 1px solid var(--bdr);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-title { font-size: 12px; font-weight: 600; letter-spacing: .1em; color: var(--ts); text-transform: uppercase; }
+    .section-meta      { font-size: 11px; }
+    .section-meta.ok   { color: var(--ok); }
+    .section-meta.warn { color: var(--warn); }
+
+    .section-body { padding: 20px 18px; display: flex; flex-direction: column; gap: 18px; }
+
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field label { font-size: 13px; color: var(--ts); font-weight: 500;}
+    .field input[type=text], .field input[type=password] {
+      background: var(--bg0); border: 1px solid var(--bdr);
+      border-radius: 8px; color: var(--tp); font-size: 14px;
+      padding: 10px 14px; font-family: inherit; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field input:focus { border-color: var(--ac); box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2); }
+
+    .kbd {
+      display: inline-flex; align-items: center;
+      background: var(--bg4); border: 1px solid var(--bdr);
+      border-radius: 6px; padding: 6px 14px;
+      font-size: 13px; color: var(--ac3); font-weight: 500;
+      width: fit-content;
+    }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--ac4); border: 1px solid var(--ac);
+      border-radius: 99px; padding: 5px 14px;
+      font-size: 13px; color: var(--ac3);
+    }
+    .pill-x {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--ac); color: white; font-size: 10px;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      opacity: 0.8; transition: opacity .2s;
+    }
+    .pill-x:hover { opacity: 1; background: var(--danger); }
+    .pill-add {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: transparent; border: 1px dashed var(--tm);
+      border-radius: 99px; padding: 5px 14px;
+      font-size: 13px; color: var(--ts); cursor: pointer;
+      transition: all .2s;
+    }
+    .pill-add:hover { border-color: var(--ac); color: var(--ac3); background: var(--bg3); }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0; border-bottom: 1px solid var(--bdr);
+    }
+    .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .toggle-row:first-child { padding-top: 0; }
+    .toggle-info { display: flex; flex-direction: column; gap: 4px; }
+    .toggle-name { font-size: 14px; font-weight: 500; color: var(--tp); }
+    .toggle-desc { font-size: 13px; color: var(--ts); }
+    .toggle {
+      width: 44px; height: 24px; background: var(--bg4);
+      border: 1px solid var(--bdr); border-radius: 99px;
+      position: relative; cursor: pointer; flex-shrink: 0;
+      transition: background .15s, border-color .15s;
+    }
+    .toggle.on { background: var(--ac); border-color: var(--ac); }
+    .toggle-thumb {
+      position: absolute; width: 18px; height: 18px;
+      border-radius: 50%; background: var(--ts);
+      top: 2px; left: 2px; transition: left .15s, background .15s;
+    }
+    .toggle.on .toggle-thumb { left: 22px; background: white; }
+
+    .obs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .hint { font-size: 13px; color: var(--ts); line-height: 1.6; }
+    .info-card { background: var(--bg3); padding: 16px; border-radius: 8px; border-left: 3px solid var(--ac); }
+
+    .footer {
+      padding: 16px 32px; border-top: 1px solid var(--bdr);
+      background: var(--bg0); display: flex;
+      align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .footer-hint { font-size: 13px; color: var(--ts); }
+    .footer-btns { display: flex; gap: 10px; }
+    .btn { padding: 9px 22px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; font-family: inherit; transition: background .15s; }
+    .btn-ghost   { background: transparent; border: 1px solid var(--bdr); color: var(--ts); }
+    .btn-ghost:hover { border-color: var(--tm); color: var(--tp); }
+    .btn-primary { background: var(--ac); color: white; }
+    .btn-primary:hover { background: var(--ac2); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Mixer ── */
+    .mixer-row {
+      background: var(--bg0); border: 1px solid var(--bdr); border-radius: 8px;
+      padding: 12px 16px; display: flex; align-items: stretch; gap: 16px; min-height: 70px;
+    }
+    .mx-left { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 80px; flex-shrink: 0; }
+    .mx-mute {
+      width: 32px; height: 32px; border-radius: 6px;
+      background: var(--bg3); border: 1px solid var(--bdr);
+      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; color: var(--ts);
+    }
+    .mx-mute:hover { border-color: var(--tm); color: var(--tp); }
+    .mx-mute.active { background: var(--danger); border-color: var(--danger); color: white; opacity: 1; }
+    .mx-mute svg { width: 16px; height: 16px; stroke: currentColor; fill: none; }
+    .mx-app { font-size: 11px; color: var(--tp); font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; border-bottom: 1px solid var(--bdr); padding-bottom: 4px; letter-spacing: 0.05em; }
+    
+    .mx-right { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; padding: 4px 0; }
+    
+    .vol-wrapper { position: relative; height: 20px; display: flex; align-items: center; }
+    .vol-meter-bg {
+      position: absolute; left: 0; right: 0; top: 4px; bottom: 4px; background: var(--bg2); border: 1px solid var(--bdr); border-radius: 2px; overflow: hidden;
+    }
+    .vol-meter-fill {
+      height: 100%; width: 0%; will-change: width;
+      background: linear-gradient(90deg, #2ecc71 0%, #2ecc71 65%, #f1c40f 65%, #f1c40f 85%, #e74c3c 85%, #e74c3c 100%);
+    }
+    .vol-meter-fill.muted { filter: grayscale(1) brightness(0.5); }
+    .vol-meter-peak {
+      position: absolute; top: 0; bottom: 0; width: 3px; left: 0%;
+      background: white; z-index: 5; opacity: 0.9;
+      box-shadow: 0 0 4px rgba(0,0,0,0.5); will-change: left;
+    }
+    .vol-meter-peak.muted { filter: grayscale(1) brightness(0.5); }
+    
+    .vol-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; background: transparent; position: relative; z-index: 2; margin: 0; outline: none; border: none;
+    }
+    .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 10px; height: 20px; border-radius: 3px; background: white; cursor: pointer;
+      box-shadow: -1px 0 3px rgba(0,0,0,0.4);
+    }
+    .vol-slider::-webkit-slider-thumb:active { background: #dcdcdc; }
+    .vol-slider:focus { border: none !important; box-shadow: none !important; }
+    
+    .mx-ticks { display: flex; justify-content: space-between; padding: 0 5px; margin-top: -6px; }
+    .tick { font-size: 9px; color: var(--tm); position: relative; width: 20px; text-align: center; }
+    .tick::before { content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 1px; height: 4px; background: var(--tm); }
+
+    .mobile-status {
+      display: none;
+      background: var(--bg2); border: 1px solid var(--bdr);
+      border-radius: 10px; padding: 16px;
+      flex-direction: column; gap: 12px;
+      margin-bottom: 6px;
+    }
+    .mobile-status-title { font-size: 11px; font-weight: 600; letter-spacing: .1em; color: var(--ts); text-transform: uppercase; }
+
+    .mobile-bottom-nav {
+      display: none;
+      background: var(--bg0);
+      border-top: 1px solid var(--bdr);
+      padding: 10px 6px;
+      justify-content: space-around;
+      flex-shrink: 0;
+    }
+    .mobile-bottom-nav .nav-item {
+      flex: 1; text-align: center; justify-content: center; font-size: 12px; padding: 12px 0; border-radius: 8px; gap: 0;
+    }
+
+    @media (max-width: 640px) {
+      .app-frame { width: 100%; height: auto; min-height: 100vh; border-radius: 0; border: none; margin: 0; max-height: none; box-shadow: none; }
+      .titlebar { display: none; }
+      .accent-line { display: none; }
+      .mobile-bar { display: flex; }
+      .sidebar { display: none; }
+      .body-wrap { flex-direction: column; }
+      .page-content { padding: 16px; gap: 14px; }
+      .mobile-status { display: flex; }
+      .field-row { grid-template-columns: 1fr; }
+      .obs-grid  { grid-template-columns: 1fr; }
+      .footer { flex-direction: column; gap: 14px; align-items: stretch; padding: 20px 16px; }
+      .footer-btns { gap: 10px; display: flex; }
+      .btn { flex: 1; text-align: center; padding: 14px 18px; }
+      .footer-hint { text-align: center; }
+      .mobile-bottom-nav { display: flex; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Banners -->
+<div id="conn-banner">⚠ Sin conexión con LordxMute — asegúrate de que el programa de PC está corriendo</div>
+<div id="toast"></div>
+
+<div class="app-frame">
+
+  <div class="titlebar">
+    <div class="tb-dots">
+      <div class="tb-dot d-close"></div>
+      <div class="tb-dot d-min"></div>
+      <div class="tb-dot d-max"></div>
+    </div>
+    <div class="tb-title">LordxMute — Panel de Control</div>
+    <div class="tb-right"></div>
+  </div>
+  <div class="accent-line"></div>
+
+  <div class="mobile-bar">
+    <div>
+      <div class="mobile-logo">LordxMute</div>
+      <div id="mob-nav-title" style="font-size:12px;color:var(--ts);margin-top:2px;">Configuración</div>
+    </div>
+    <div class="mobile-mute-btn" id="mobileMuteBtn" onclick="toggleMuteObs()">
+      <svg id="mobileIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="body-wrap">
+
+    <div class="sidebar">
+      <div class="logo-area">
+        <div class="logo-name">LordxMute</div>
+        <div class="logo-sub">v1.1.0 — Windows</div>
+      </div>
+      <div class="mute-area">
+        <div class="mute-btn" id="muteBtn" onclick="toggleMuteObs()">
+          <div class="mute-ring" id="mutePulse"></div>
+          <svg id="muteIcon" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+        </div>
+        <div class="mute-label" id="muteLabel">Stream activo</div>
+        <div class="mute-key" id="muteKeyHint">F9</div>
+      </div>
+      
+      <!-- Listado Dinámico de Apps en la Sidebar -->
+      <div class="status-area">
+        <div id="side_apps_container" style="display:flex; flex-direction:column; gap:14px;">
+          <!-- Dynamically filled -->
+        </div>
+        <div class="stat-row" style="margin-top:6px; border-top:1px dashed var(--bdr); padding-top:14px;">
+          <div class="stat-dot amber" id="side_obs_dot"></div>
+          <span class="stat-label">OBS WebSocket</span>
+          <span class="stat-val" id="side_obs_val" style="color:var(--warn)">sin conectar</span>
+        </div>
+      </div>
+
+      <div class="sidebar-nav">
+        <div class="nav-item active" id="nav_config" onclick="switchTab('config')">
+          <div class="nav-dot"></div>Configuración
+        </div>
+        <div class="nav-item" id="nav_status" onclick="switchTab('status')">
+          <div class="nav-dot"></div>Estado en Vivo
+        </div>
+        <div class="nav-item" id="nav_about" onclick="switchTab('about')">
+          <div class="nav-dot"></div>Acerca de
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+
+      <!-- ================= PÁGINA 1: CONFIGURACIÓN ================= -->
+      <div id="page_config" class="page-content">
+        
+        <div class="mobile-status">
+          <div class="mobile-status-title">Estado Local</div>
+          <div id="mobile_apps_container" style="display:flex; flex-direction:column; gap:12px;"></div>
+          <div class="stat-row" style="margin-top:4px; border-top:1px dashed var(--bdr); padding-top:12px;">
+            <div class="stat-dot amber" id="mob_obs_dot"></div>
+            <span class="stat-label">OBS WebSocket</span>
+            <span class="stat-val" id="mob_obs_val" style="color:var(--warn)">sin conectar</span>
+          </div>
+        </div>
+
+        <!-- HOTKEYS -->
+        <div class="section">
+          <div class="section-head"><span class="section-title">Controles (Hotkeys)</span></div>
+          <div class="section-body">
+            <div class="field-row">
+              <div class="field">
+                <label>Mutear stream (OBS)</label>
+                <input type="text" id="inp_hotkey_obs" value="F9">
+              </div>
+              <div class="field">
+                <label>Mutear PC (local)</label>
+                <input type="text" id="inp_hotkey_pc" value="F10">
+              </div>
+            </div>
+            <p class="hint">Ejecuta LordxMute como <b>Administrador</b> en Windows para que estos atajos funcionen dentro de juegos a pantalla completa.</p>
+          </div>
+        </div>
+
+        <!-- APLICACIONES -->
+        <div class="section">
+          <div class="section-head">
+            <span class="section-title">Aplicaciones Windows</span>
+            <span class="section-meta ok" id="appsCount">0 activas</span>
+          </div>
+          <div class="section-body">
+            <div class="field">
+              <label>Procesos a mutear automáticamente en tu PC:</label>
+              <div class="pills" id="appsPills" style="margin-top:4px"></div>
+              
+              <div id="addAppUI" style="display:none; margin-top:12px; align-items:center; gap:8px;">
+                 <input type="text" id="addAppInp" list="sysProcesses" placeholder="Selecciona o escribe el .exe..." style="flex:1;">
+                 <button class="btn btn-primary" style="padding: 10px 16px;" onclick="confirmAddApp()">Añadir</button>
+                 <button class="btn btn-ghost" style="padding: 10px 16px;" onclick="cancelAddApp()">Cancelar</button>
+              </div>
+            </div>
+            <p class="hint">Escribe el nombre exacto del ejecutable (Ejemplo: <code style="color:var(--tp); background:var(--bg0); padding:2px 6px; border-radius:4px;">Robloxito.exe</code>). Puedes encontrar el nombre en la pestaña "Detalles" del Administrador de Tareas.</p>
+          </div>
+        </div>
+
+        <!-- OBS WebSocket -->
+        <div class="section">
+          <div class="section-head">
+            <span class="section-title">OBS WebSocket (Stream)</span>
+            <span class="section-meta warn" id="obsStatus">desconectado</span>
+          </div>
+          <div class="section-body">
+            <div class="toggle-row" style="border:none;padding:0">
+              <div class="toggle-info">
+                <span class="toggle-name">Habilitar integración OBS</span>
+                <span class="toggle-desc">Mutea estas fuentes de manera remota al presionar el hotkey</span>
+              </div>
+              <div class="toggle" id="obsToggle" onclick="toggleObs()"><div class="toggle-thumb"></div></div>
+            </div>
+            <div id="obsFields" style="display:flex;flex-direction:column;gap:18px;opacity:.4;pointer-events:none; margin-top:8px;">
+              <div class="obs-grid">
+                <div class="field">
+                  <label>Host de OBS</label>
+                  <input type="text" id="inp_obs_host" value="localhost">
+                </div>
+                <div class="field">
+                  <label>Puerto (v5 default: 4455)</label>
+                  <input type="text" id="inp_obs_port" value="4455">
+                </div>
+              </div>
+              <div class="field">
+                <label>Contraseña OBS WebSocket</label>
+                <input type="password" id="inp_obs_password" placeholder="dejar vacío si no tiene" autocomplete="off">
+              </div>
+              <div class="field">
+                <label>Nombres exactos de las fuentes a mutear:</label>
+                <div class="pills" id="obsPills" style="margin-top:4px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- OTRAS OPCIONES -->
+        <div class="section">
+          <div class="section-head"><span class="section-title">Otras opciones</span></div>
+          <div class="section-body" style="gap:0">
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-name">Círculo en bandeja del sistema</span>
+                <span class="toggle-desc">Indicador visual rojo/verde junto al reloj de Windows</span>
+              </div>
+              <div class="toggle on" id="trayToggle" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- fin page_config -->
+
+      <!-- ================= PÁGINA 2: ESTADO ================= -->
+      <div id="page_status" class="page-content" style="display:none;">
+        <div class="section">
+          <div class="section-head"><span class="section-title">Audio Mixer Local</span></div>
+          <div class="section-body" id="mixerContainer" style="padding: 16px; display:flex; flex-direction:column; gap:12px;">
+             <!-- Rellenado dinámicamente -->
+             <p class="hint" style="text-align:center;">No se ha detectado audio en tus apps recientemente.</p>
+          </div>
+        </div>
+
+        <div class="section" id="obsMixerSection" style="display:none;">
+          <div class="section-head">
+            <span class="section-title">Audio Mixer OBS (Remoto)</span>
+            <span class="section-meta ok">conectado</span>
+          </div>
+          <div class="section-body" id="obsMixerContainer" style="padding: 16px; display:flex; flex-direction:column; gap:12px;">
+             <!-- OBS sources -->
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="section-title">Monitoreo de Audio y OBS</span></div>
+          <div class="section-body">
+            <div class="info-card">
+              <p style="color:var(--tp); font-size:15px; font-weight:600; margin-bottom:8px;">¿Cómo funciona?</p>
+              <p class="hint">LordxMute analiza en tiempo real las sesiones de audio de tu PC y muestra su volumen en el mixer. Si un juego/software no aparece en el Mixer a pesar de estar abierto, significa que <b>aún no ha emitido ningún sonido</b>, o que la PC no registra su sesión todavía.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= PÁGINA 3: ACERCA DE ================= -->
+      <div id="page_about" class="page-content" style="display:none;">
+        <div class="section">
+          <div class="section-head"><span class="section-title">LordxMute By Kitgg</span></div>
+          <div class="section-body" style="align-items: center; text-align: center; padding: 40px 20px;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--ac); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 0 20px rgba(124,58,237,0.4);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              </svg>
+            </div>
+            <h2 style="color: var(--tp); font-size: 24px; font-weight: 700; margin-bottom: 8px;">LordxMute v1.1 Premium</h2>
+            <p style="color: var(--ts); font-size: 15px; max-width: 400px; line-height: 1.6;">
+              Una solución optimizada y sin latencia para controlar el audio en tus streams y en tus auriculares de forma independiente.
+            </p>
+            <div style="margin-top: 32px; display:flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+              <span class="pill" style="pointer-events: none; background: var(--bg3); border-color: var(--bdr);">Python Backend</span>
+              <span class="pill" style="pointer-events: none; background: var(--bg3); border-color: var(--bdr);">OBS WebSocket v5</span>
+              <span class="pill" style="pointer-events: none; background: var(--bg3); border-color: var(--bdr);">Windows Core Audio</span>
+              <span class="pill" style="pointer-events: none; background: var(--bg3); border-color: var(--bdr);">Node.js Local Server</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- fin main -->
+  </div> <!-- fin body-wrap -->
+
+  <div class="footer" id="main_footer">
+    <span class="footer-hint" id="footerText">Los cambios se aplican al instante al guardar</span>
+    <div class="footer-btns">
+      <button class="btn btn-ghost" id="btnCancel" onclick="loadConfig()">Descartar cambios</button>
+      <button class="btn btn-primary" id="btnSave" onclick="saveConfig()">Guardar Configuración</button>
+    </div>
+  </div>
+
+  <div class="mobile-bottom-nav">
+    <div class="nav-item active" id="mob_nav_config" onclick="switchTab('config')">Configuración</div>
+    <div class="nav-item" id="mob_nav_status" onclick="switchTab('status')">Estado en Vivo</div>
+    <div class="nav-item" id="mob_nav_about" onclick="switchTab('about')">Acerca de</div>
+  </div>
+
+</div>
+
+<script>
+const API  = window.location.origin;
+const WS   = 'ws://' + window.location.hostname + ':6768';
+
+let cfg      = {};
+let obsOn    = false;
+let wsocket  = null;
+let wsRetry  = 0;
+
+// ─── Tabs Navigation ──────────────────────────────────────────────────────────
+function switchTab(tabId) {
+  // Ocultar todas las páginas
+  document.querySelectorAll('.page-content').forEach(el => el.style.display = 'none');
+  // Quitar estilo activo a los botones
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  
+  // Mostrar página deseada
+  document.getElementById('page_' + tabId).style.display = 'flex';
+  if (document.getElementById('nav_' + tabId)) document.getElementById('nav_' + tabId).classList.add('active');
+  if (document.getElementById('mob_nav_' + tabId)) document.getElementById('mob_nav_' + tabId).classList.add('active');
+  
+  // En móviles, actualizar el sub-título de la barra
+  const tabTitles = { 'config': 'Configuración', 'status': 'Estado en Vivo', 'about': 'Acerca de' };
+  document.getElementById('mob-nav-title').textContent = tabTitles[tabId];
+
+  // Footer solo visible en configuración
+  const footer = document.getElementById('main_footer');
+  if (tabId === 'config') {
+    footer.style.display = 'flex';
+  } else {
+    footer.style.display = 'none';
+  }
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'show ' + type;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.className = ''; }, 2800);
+}
+
+// ─── Banner (desconexión) ─────────────────────────────────────────────────────
+function setBanner(show) {
+  document.getElementById('conn-banner').classList.toggle('show', show);
+}
+
+// ─── WebSocket ───────────────────────────────────────────────────────────────
+function connectWS() {
+  try {
+    wsocket = new WebSocket(WS);
+  } catch {
+    scheduleWSRetry(); return;
+  }
+
+  wsocket.onopen = () => {
+    wsRetry = 0;
+    setBanner(false);
+  };
+
+  wsocket.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.event === 'telemetry') {
+        renderMixer(msg.apps);
+      }
+      if (msg.event === 'state' || msg.event === 'connected') {
+        applyMuteState(msg.muted_obs, msg.muted_pc);
+      }
+      if (msg.event === 'config_saved') {
+        showToast('✅ Configuración guardada', 'ok');
+      }
+    } catch {}
+  };
+
+  wsocket.onclose = () => { setBanner(true); scheduleWSRetry(); };
+  wsocket.onerror = () => {};
+}
+
+function scheduleWSRetry() {
+  const delay = Math.min(3000 * (wsRetry + 1), 15000);
+  wsRetry++;
+  setTimeout(connectWS, delay);
+}
+
+// ─── Load config from API ────────────────────────────────────────────────────
+async function loadConfig() {
+  try {
+    const r = await fetch(`${API}/api/config`);
+    if (!r.ok) throw new Error();
+    cfg = await r.json();
+    renderConfig();
+    setBanner(false);
+    await refreshStatus();
+  } catch {
+    setBanner(true);
+    showToast('No se pudo conectar con LordxMute Backend', 'err');
+  }
+}
+
+async function refreshStatus() {
+  try {
+    const r = await fetch(`${API}/api/status`);
+    if (!r.ok) return;
+    const s = await r.json();
+    applyMuteState(s.muted_obs, s.muted_pc);
+    updateAppDots(s.apps);
+    updateObsDot(s.obs_connected);
+    if (s.obs_sources && Object.keys(s.obs_sources).length > 0) {
+       document.getElementById('obsMixerSection').style.display = 'block';
+       renderObsMixer(s.obs_sources);
+    } else {
+       document.getElementById('obsMixerSection').style.display = 'none';
+    }
+  } catch {}
+}
+
+// ─── Render config into UI ───────────────────────────────────────────────────
+function renderConfig() {
+  document.getElementById('inp_hotkey_obs').value = cfg.hotkey_obs || 'F9';
+  document.getElementById('inp_hotkey_pc').value  = cfg.hotkey_pc  || 'F10';
+  document.getElementById('muteKeyHint').textContent = cfg.hotkey_obs || 'F9';
+
+  // Apps pills
+  renderPills('appsPills', cfg.apps || [], (arr) => { cfg.apps = arr; });
+
+  // OBS
+  const obs = cfg.obs || {};
+  obsOn = !!obs.enabled;
+  const toggle = document.getElementById('obsToggle');
+  toggle.classList.toggle('on', obsOn);
+  const fields = document.getElementById('obsFields');
+  fields.style.opacity      = obsOn ? '1'    : '0.4';
+  fields.style.pointerEvents= obsOn ? 'auto' : 'none';
+  document.getElementById('obsStatus').textContent = obsOn ? 'habilitado' : 'desactivado';
+  document.getElementById('obsStatus').className   = obsOn ? 'section-meta ok' : 'section-meta warn';
+
+  document.getElementById('inp_obs_host').value     = obs.host     || 'localhost';
+  document.getElementById('inp_obs_port').value     = obs.port     || '4455';
+  document.getElementById('inp_obs_password').value = obs.password || '';
+
+  renderPills('obsPills', obs.sources_to_mute || [], (arr) => {
+    if (!cfg.obs) cfg.obs = {};
+    cfg.obs.sources_to_mute = arr;
+  });
+
+  // Tray toggle
+  document.getElementById('trayToggle').classList.toggle('on', !!cfg.show_tray);
+}
+
+// ─── Pills helper ────────────────────────────────────────────────────────────
+function renderPills(containerId, items, onChange) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  items.forEach((item, i) => {
+    const pill = document.createElement('div');
+    pill.className = 'pill';
+    pill.innerHTML = `${item}<div class="pill-x" onclick="removePill('${containerId}',${i})">✕</div>`;
+    container.appendChild(pill);
+  });
+  const add = document.createElement('div');
+  add.className = 'pill-add';
+  add.textContent = '+ Agregar';
+  add.onclick = () => {
+    if (containerId === 'appsPills') {
+       showAddAppUI();
+       return;
+    }
+    const name = window.prompt('Nombre de la fuente en OBS:');
+    if (name && name.trim()) {
+      items.push(name.trim());
+      onChange(items);
+      renderPills(containerId, items, onChange);
+    }
+  };
+  container.appendChild(add);
+}
+
+// ─── Add App with Autocomplete ────────────────────────────────────────────────
+async function fetchProcesses() {
+  try {
+    const r = await fetch(`${API}/api/processes`);
+    if(r.ok) {
+       const exes = await r.json();
+       const html = exes.map(exe => `<option value="${exe}">`).join('');
+       let dl = document.getElementById('sysProcesses');
+       if(!dl) {
+           dl = document.createElement('datalist');
+           dl.id = 'sysProcesses';
+           document.body.appendChild(dl);
+       }
+       dl.innerHTML = html;
+    }
+  } catch(e) {}
+}
+
+function showAddAppUI() {
+  document.getElementById('addAppUI').style.display = 'flex';
+  document.getElementById('addAppInp').value = '';
+  document.getElementById('addAppInp').focus();
+  fetchProcesses();
+}
+
+function cancelAddApp() {
+  document.getElementById('addAppUI').style.display = 'none';
+}
+
+function confirmAddApp() {
+  const inp = document.getElementById('addAppInp');
+  const name = inp.value;
+  if(name && name.trim()) {
+    cfg.apps.push(name.trim());
+    renderPills('appsPills', cfg.apps, (arr) => { cfg.apps = arr; });
+    updateAppDots({});
+    cancelAddApp();
+  }
+}
+
+function removePill(containerId, idx) {
+  if (containerId === 'appsPills') {
+    cfg.apps.splice(idx, 1);
+    renderPills('appsPills', cfg.apps, (arr) => { cfg.apps = arr; });
+    updateAppDots({});
+  } else {
+    cfg.obs.sources_to_mute.splice(idx, 1);
+    renderPills('obsPills', cfg.obs.sources_to_mute, (arr) => { cfg.obs.sources_to_mute = arr; });
+  }
+}
+
+// ─── Save config ──────────────────────────────────────────────────────────────
+async function saveConfig() {
+  cfg.hotkey_obs = document.getElementById('inp_hotkey_obs').value.trim() || 'F9';
+  cfg.hotkey_pc  = document.getElementById('inp_hotkey_pc').value.trim()  || 'F10';
+  if (!cfg.obs) cfg.obs = {};
+  cfg.obs.enabled  = obsOn;
+  cfg.obs.host     = document.getElementById('inp_obs_host').value.trim()     || 'localhost';
+  cfg.obs.port     = parseInt(document.getElementById('inp_obs_port').value)  || 4455;
+  cfg.obs.password = document.getElementById('inp_obs_password').value;
+  cfg.show_tray    = document.getElementById('trayToggle').classList.contains('on');
+
+  document.getElementById('btnSave').disabled = true;
+  document.getElementById('btnSave').textContent = 'Guardando...';
+  try {
+    const r = await fetch(`${API}/api/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    });
+    if (!r.ok) throw new Error();
+    document.getElementById('muteKeyHint').textContent = cfg.hotkey_obs;
+    // Forzar actualización de estado tras guardar por si cambió host de OBS
+    setTimeout(refreshStatus, 800);
+  } catch {
+    showToast('❌ Error al guardar datos', 'err');
+  } finally {
+    document.getElementById('btnSave').disabled = false;
+    document.getElementById('btnSave').textContent = 'Guardar Configuración';
+  }
+}
+
+// ─── Toggle OBS section ───────────────────────────────────────────────────────
+function toggleObs() {
+  obsOn = !obsOn;
+  const toggle = document.getElementById('obsToggle');
+  const fields = document.getElementById('obsFields');
+  const status = document.getElementById('obsStatus');
+  toggle.classList.toggle('on', obsOn);
+  fields.style.opacity      = obsOn ? '1'    : '0.4';
+  fields.style.pointerEvents= obsOn ? 'auto' : 'none';
+  status.textContent = obsOn ? 'habilitado' : 'desactivado';
+  status.className   = obsOn ? 'section-meta ok' : 'section-meta warn';
+}
+
+// ─── Mute via API ─────────────────────────────────────────────────────────────
+async function toggleMuteObs() {
+  try {
+    const r = await fetch(`${API}/api/toggle/obs`, { method: 'POST' });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    applyMuteState(data.muted_obs, null);
+  } catch {
+    showToast('Sin conexión remota para mutear', 'err');
+  }
+}
+
+// ─── Apply mute state to UI ───────────────────────────────────────────────────
+const SVG_ACTIVE = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>`;
+const SVG_MUTED  = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>`;
+
+function applyMuteState(muted_obs, muted_pc) {
+  if (muted_obs !== null && muted_obs !== undefined) {
+    const btn    = document.getElementById('muteBtn');
+    const mBtn   = document.getElementById('mobileMuteBtn');
+    const lbl    = document.getElementById('muteLabel');
+    const icon   = document.getElementById('muteIcon');
+    const mIcon  = document.getElementById('mobileIcon');
+    const ring   = document.getElementById('mutePulse');
+    const muted  = !!muted_obs;
+
+    btn  && btn.classList.toggle('active', muted);
+    mBtn && mBtn.classList.toggle('active', muted);
+    if (ring)  { ring.style.borderColor = muted ? 'var(--danger)' : 'var(--ac)'; }
+    if (lbl)   { lbl.textContent = muted ? 'Stream muteado' : 'Stream activo'; lbl.style.color = muted ? 'var(--danger)' : ''; }
+    if (icon)  { icon.innerHTML  = muted ? SVG_MUTED : SVG_ACTIVE; icon.setAttribute('stroke', muted ? 'var(--danger)' : '#a78bfa'); }
+    if (mIcon) { mIcon.innerHTML = muted ? SVG_MUTED : SVG_ACTIVE; mIcon.setAttribute('stroke', muted ? 'var(--danger)' : '#a78bfa'); }
+  }
+}
+
+// ─── Update status dots dynamically ────────────────────────────────────────────
+function updateAppDots(appsRunning) {
+  const apps = cfg.apps || [];
+  let active = 0;
+
+  const hSide = [];
+  const hMob  = [];
+
+  apps.forEach(app => {
+    const running = appsRunning ? !!appsRunning[app] : false;
+    if (running) active++;
+    
+    const shortName = app.replace('.exe', '').replace('-Win64-Shipping', '');
+    const colorClass = running ? 'green' : 'amber';
+    const valText = running ? 'activo' : 'no corre';
+    const valColor = running ? 'var(--ok)' : 'var(--warn)';
+
+    const html = `<div class="stat-row">
+      <div class="stat-dot ${colorClass}"></div>
+      <span class="stat-label" title="${app}">${shortName}</span>
+      <span class="stat-val" style="color:${valColor}">${valText}</span>
+    </div>`;
+
+    hSide.push(html);
+    hMob.push(html);
+  });
+
+  if (apps.length === 0) {
+    const empty = `<span class="hint" style="font-size:12px;">Sin apps añadidas</span>`;
+    hSide.push(empty);
+    hMob.push(empty);
+  }
+
+  const sideContainer = document.getElementById('side_apps_container');
+  const mobContainer  = document.getElementById('mobile_apps_container');
+  
+  if (sideContainer) sideContainer.innerHTML = hSide.join('');
+  if (mobContainer)  mobContainer.innerHTML = hMob.join('');
+
+  const cnt = document.getElementById('appsCount');
+  if (cnt) { 
+    cnt.textContent = `${active} en uso hoy`; 
+    cnt.className = active > 0 ? 'section-meta ok' : 'section-meta warn'; 
+  }
+}
+
+function updateObsDot(connected) {
+  const sDot = document.getElementById('side_obs_dot');
+  const sVal = document.getElementById('side_obs_val');
+  const mDot = document.getElementById('mob_obs_dot');
+  const mVal = document.getElementById('mob_obs_val');
+
+  if(connected === undefined) connected = false;
+
+  const cClass = connected ? 'green' : 'red';
+  const cText  = connected ? 'conectado' : 'error/desconectado';
+  const cCol   = connected ? 'var(--ok)' : 'var(--danger)';
+
+  if (sDot) sDot.className = `stat-dot ${cClass}`;
+  if (sVal) { sVal.textContent = cText; sVal.style.color = cCol; }
+  
+  if (mDot) mDot.className = `stat-dot ${cClass}`;
+  if (mVal) { mVal.textContent = cText; mVal.style.color = cCol; }
+}
+
+// ─── Audio Mixer ──────────────────────────────────────────────────────────────
+let isDraggingSlider = false;
+let volTimeout = null;
+
+const audioMeters = {}; // { 'safeId': { target: 0, val: 0, peak: 0, hold: 0 } }
+
+function updateMeterPhysics() {
+  for (const [id, m] of Object.entries(audioMeters)) {
+    // Attack
+    if (m.target >= m.val) {
+      m.val = m.target;
+    } else {
+      m.val -= 0.015; // Decay falloff
+      if (m.val < m.target) m.val = m.target;
+    }
+    // Peak hold
+    if (m.target >= m.peak) {
+      m.peak = m.target;
+      m.hold = 45; // Hold frames at 60 FPS (~0.7s)
+    } else {
+      if (m.hold > 0) m.hold--;
+      else {
+        m.peak -= 0.006; // Peak drop speed
+        if (m.peak < m.val) m.peak = m.val;
+      }
+    }
+    
+    const fillEl = document.getElementById(`mx_fill_${id}`);
+    const peakEl = document.getElementById(`mx_peak_${id}`);
+    if (fillEl) fillEl.style.width = `${Math.max(0, Math.min(m.val * 100, 100))}%`;
+    if (peakEl) peakEl.style.left = `${Math.max(0, Math.min(m.peak * 100, 99))}%`;
+  }
+  requestAnimationFrame(updateMeterPhysics);
+}
+requestAnimationFrame(updateMeterPhysics);
+
+function renderMixer(appsData) {
+  const container = document.getElementById('mixerContainer');
+  let validApps = 0;
+
+  for (const [app, data] of Object.entries(appsData)) {
+    validApps++;
+    const safeId = app.replace(/[^a-z0-9]/gi, '_');
+    let row = document.getElementById(`mx_row_${safeId}`);
+    
+    if (!row) {
+      if (container.innerHTML.includes('hint')) { container.innerHTML = ''; }
+      const shortName = app.replace('.exe','').replace('-Win64-Shipping','');
+      const rowHTML = `
+        <div class="mixer-row" id="mx_row_${safeId}">
+          <div class="mx-left">
+            <div class="mx-app" title="${app}">${shortName}</div>
+            <div class="mx-mute ${data.muted ? 'active' : ''}" id="mx_mute_${safeId}" onclick="appMute('${app}', !this.classList.contains('active'))">
+              ${data.muted ? SVG_MUTED : '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>'}
+            </div>
+          </div>
+          <div class="mx-right">
+             <div class="vol-wrapper">
+                <div class="vol-meter-bg">
+                  <div class="vol-meter-fill ${data.muted ? 'muted' : ''}" id="mx_fill_${safeId}"></div>
+                  <div class="vol-meter-peak ${data.muted ? 'muted' : ''}" id="mx_peak_${safeId}"></div>
+                </div>
+                <input type="range" class="vol-slider" id="mx_slider_${safeId}" min="0" max="1" step="0.01" value="${data.volume}"
+                  oninput="onSliderInput('${app}', this.value)"
+                  onmousedown="isDraggingSlider=true"
+                  onmouseup="setTimeout(() => { isDraggingSlider=false; onSliderChange('${app}', this.value); }, 50)"
+                  ontouchstart="isDraggingSlider=true"
+                  ontouchend="setTimeout(() => { isDraggingSlider=false; onSliderChange('${app}', this.value); }, 50)">
+             </div>
+             <div class="mx-ticks">
+                <div class="tick">-60</div><div class="tick">-50</div><div class="tick">-40</div>
+                <div class="tick">-30</div><div class="tick">-20</div><div class="tick">-10</div>
+                <div class="tick">0</div>
+             </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', rowHTML);
+    }
+    
+    // Physics targets
+    if (!audioMeters[safeId]) {
+      audioMeters[safeId] = { target: 0, val: 0, peak: 0, hold: 0 };
+    }
+    audioMeters[safeId].target = data.peak;
+
+    if (row) {
+      const fill = document.getElementById(`mx_fill_${safeId}`);
+      if (fill) fill.className = `vol-meter-fill ${data.muted ? 'muted' : ''}`;
+      
+      const elPeak = document.getElementById(`mx_peak_${safeId}`);
+      if (elPeak) elPeak.className = `vol-meter-peak ${data.muted ? 'muted' : ''}`;
+      
+      const slider = document.getElementById(`mx_slider_${safeId}`);
+      if (slider && !isDraggingSlider) {
+        slider.value = data.volume;
+      }
+
+      const muteBtn = document.getElementById(`mx_mute_${safeId}`);
+      const btnActive = muteBtn.classList.contains('active');
+      if (muteBtn && btnActive !== data.muted) {
+        muteBtn.className = `mx-mute ${data.muted ? 'active' : ''}`;
+        muteBtn.innerHTML = data.muted ? SVG_MUTED : '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+      }
+    }
+  }
+
+  // Si desaparece alguna app activa
+  if (validApps === 0 && !container.innerHTML.includes('hint')) {
+    container.innerHTML = `<p class="hint" style="text-align:center;">No se ha detectado audio en tus apps recientemente.</p>`;
+  }
+}
+
+function onSliderInput(appName, val) {
+  if (volTimeout) return;
+  volTimeout = setTimeout(() => {
+    setVolume(appName, val);
+    volTimeout = null;
+  }, 100);
+}
+
+function onSliderChange(appName, val) {
+  setVolume(appName, val);
+}
+
+async function setVolume(app, vol) {
+  try {
+    await fetch(`${API}/api/set_volume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ app: app, volume: parseFloat(vol) })
+    });
+  } catch {}
+}
+
+async function appMute(app, mute) {
+  // Update visually immediately to avoid lag perception
+  const safeId = app.replace(/[^a-z0-9]/gi, '_');
+  const btn = document.getElementById(`mx_mute_${safeId}`);
+  if(btn) {
+    btn.className = `mx-mute ${mute ? 'active' : ''}`;
+    btn.innerHTML = mute ? SVG_MUTED : '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+  }
+  
+  try {
+    await fetch(`${API}/api/set_mute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ app: app, muted: mute })
+    });
+  } catch {}
+}
+
+// ─── OBS Mixer ────────────────────────────────────────────────────────────────
+let isDraggingObsSlider = false;
+let obsVolTimeout = null;
+
+function renderObsMixer(sourcesData) {
+  const container = document.getElementById('obsMixerContainer');
+
+  for (const [src, data] of Object.entries(sourcesData)) {
+    const safeId = src.replace(/[^a-z0-9]/gi, '_');
+    let row = document.getElementById(`obs_mx_row_${safeId}`);
+    
+    if (!row) {
+      const rowHTML = `
+        <div class="mixer-row" id="obs_mx_row_${safeId}">
+          <div class="mx-left">
+            <div class="mx-app" title="${src}">${src}</div>
+            <div class="mx-mute ${data.muted ? 'active' : ''}" id="obs_mx_mute_${safeId}" onclick="obsMute('${src}', !this.classList.contains('active'))">
+              ${data.muted ? SVG_MUTED : '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>'}
+            </div>
+          </div>
+          <div class="mx-right">
+             <div class="vol-wrapper" style="opacity: 0.8;">
+                <div class="vol-meter-bg">
+                  <!-- No live peak for OBS ReqClient, simulate fill based on volume slider pos -->
+                  <div class="vol-meter-fill ${data.muted ? 'muted' : ''}" id="obs_mx_fill_${safeId}" style="width: ${data.volume * 100}%"></div>
+                </div>
+                <input type="range" class="vol-slider" id="obs_mx_slider_${safeId}" min="0" max="1" step="0.01" value="${data.volume}"
+                  oninput="onObsSliderInput('${src}', this.value)"
+                  onmousedown="isDraggingObsSlider=true"
+                  onmouseup="setTimeout(() => { isDraggingObsSlider=false; onObsSliderChange('${src}', this.value); }, 50)"
+                  ontouchstart="isDraggingObsSlider=true"
+                  ontouchend="setTimeout(() => { isDraggingObsSlider=false; onObsSliderChange('${src}', this.value); }, 50)">
+             </div>
+             <div class="mx-ticks">
+                <div class="tick">-60</div><div class="tick">-50</div><div class="tick">-40</div>
+                <div class="tick">-30</div><div class="tick">-20</div><div class="tick">-10</div>
+                <div class="tick">0</div>
+             </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', rowHTML);
+    } else {
+      const fill = document.getElementById(`obs_mx_fill_${safeId}`);
+      if (fill && !isDraggingObsSlider) {
+        fill.style.width = `${Math.min(data.volume * 100, 100)}%`;
+        fill.className = `vol-meter-fill ${data.muted ? 'muted' : ''}`;
+      }
+      
+      const slider = document.getElementById(`obs_mx_slider_${safeId}`);
+      if (slider && !isDraggingObsSlider) {
+        slider.value = data.volume;
+      }
+
+      const muteBtn = document.getElementById(`obs_mx_mute_${safeId}`);
+      const btnActive = muteBtn.classList.contains('active');
+      if (muteBtn && btnActive !== data.muted) {
+        muteBtn.className = `mx-mute ${data.muted ? 'active' : ''}`;
+        muteBtn.innerHTML = data.muted ? SVG_MUTED : '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+      }
+    }
+  }
+}
+
+function onObsSliderInput(srcName, val) {
+  const safeId = srcName.replace(/[^a-z0-9]/gi, '_');
+  document.getElementById(`obs_mx_fill_${safeId}`).style.width = `${val * 100}%`;
+  if (obsVolTimeout) return;
+  obsVolTimeout = setTimeout(() => {
+    setObsVolume(srcName, val);
+    obsVolTimeout = null;
+  }, 100);
+}
+
+function onObsSliderChange(srcName, val) {
+  setObsVolume(srcName, val);
+}
+
+async function setObsVolume(src, vol) {
+  try {
+    await fetch(`${API}/api/obs/set_volume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: src, volume: parseFloat(vol) })
+    });
+  } catch {}
+}
+
+async function obsMute(src, mute) {
+  const safeId = src.replace(/[^a-z0-9]/gi, '_');
+  const btn = document.getElementById(`obs_mx_mute_${safeId}`);
+  if(btn) {
+    btn.className = `mx-mute ${mute ? 'active' : ''}`;
+    btn.innerHTML = mute ? SVG_MUTED : '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+  }
+  try {
+    await fetch(`${API}/api/obs/set_mute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: src, muted: mute })
+    });
+  } catch {}
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+connectWS();
+loadConfig();
+// Fetch available processes for datalist early
+fetchProcesses();
+// Poll status every 5s to keep live app dots fresh
+setInterval(refreshStatus, 3000);
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+pycaw>=20240210
+keyboard>=0.13.5
+pystray>=0.19.5
+Pillow>=10.0.0
+comtypes>=1.4.0
+websockets>=13.0
+
+# Opcional: integración OBS (WebSocket v5)
+obsws-python>=1.7.2
+
+# Opcional: notificaciones Windows 10/11
+win10toast>=0.9

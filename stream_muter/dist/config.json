@@ -1,0 +1,19 @@
+{
+  "hotkey_obs": "F9",
+  "hotkey_pc": "F10",
+  "apps": [
+    "Spotify.exe",
+    "VALORANT-Win64-Shipping.exe"
+  ],
+  "obs": {
+    "enabled": true,
+    "host": "localhost",
+    "port": 4455,
+    "password": "",
+    "sources_to_mute": [
+      "VALORANT"
+    ]
+  },
+  "show_tray": true,
+  "notify_on_toggle": false
+}
