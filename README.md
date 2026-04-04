@@ -1,0 +1,2 @@
+# lordxmute
+programa para mutear
