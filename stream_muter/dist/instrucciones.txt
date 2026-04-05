@@ -1,0 +1,39 @@
+
+============================================================
+           LORDXMUTE v1.1.0 - BY JUAN "KIT" CAMARENA
+============================================================
+
+¡Gracias por usar LordxMute! Esta es una herramienta potente 
+y ligera para controlar tu audio de forma simple.
+
+------------------------------------------------------------
+1. INICIO RÁPIDO
+------------------------------------------------------------
+
+• Ejecuta 'stream_muter.exe'. Solo dale doble clic.
+• IMPORTANTE: Si los atajos de teclado no te funcionan dentro 
+  de un juego, ciérralo y ejecútalo como ADMINISTRADOR.
+
+------------------------------------------------------------
+2. PANEL DE CONTROL (PC y MÓVIL)
+------------------------------------------------------------
+
+Una vez abierto, el programa crea un panel táctil automático.
+• EN TU PC: Abre tu navegador y escribe: http://localhost:6767
+• EN TU MÓVIL: Escanea el código QR que aparece en la ventana 
+  negra (consola) de Windows. 
+Esto abrirá un mezclador de audio simple en tu teléfono 
+que funciona por WiFi (deben estar en la misma red).
+
+------------------------------------------------------------
+3. ATAJOS POR DEFECTO (HOTKEYS)
+------------------------------------------------------------
+
+• [F9]:  Mutear/Desmutear en OBS (Stream).
+• [F10]: Mutear/Desmutear tus Apps en la PC (Local).
+Puedes cambiar estas teclas en la pestaña "Configuración" 
+dentro del panel web.
+
+------------------------------------------------------------
+¡Que disfrutes tu stream organizado!
+============================================================

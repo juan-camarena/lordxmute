@@ -198,6 +198,44 @@
       width: fit-content;
     }
 
+    /* ── Key Capture ── */
+    .key-capture {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg0); border: 1px solid var(--bdr);
+      border-radius: 8px; padding: 10px 14px;
+      cursor: pointer; transition: border-color .15s, box-shadow .15s;
+      user-select: none; min-height: 40px; width: 100%; box-sizing: border-box;
+    }
+    .key-capture:hover { border-color: var(--tm); }
+    .key-capture.listening {
+      border-color: var(--ac);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
+      animation: kc-pulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes kc-pulse {
+      from { box-shadow: 0 0 0 2px rgba(124,58,237,0.15); }
+      to   { box-shadow: 0 0 0 3px rgba(124,58,237,0.4); }
+    }
+    .key-capture-label {
+      flex: 1; font-size: 13px; color: var(--ts);
+    }
+    .key-capture.listening .key-capture-label { color: var(--ac3); }
+    .key-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .key-badge {
+      background: var(--bg4); border: 1px solid var(--bdr);
+      border-radius: 5px; padding: 3px 9px;
+      font-size: 12px; font-weight: 600; color: var(--tp);
+      font-family: 'SF Mono', 'Consolas', monospace;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      white-space: nowrap;
+    }
+    .key-badge-sep { font-size: 11px; color: var(--tm); }
+    .key-capture-hint {
+      font-size: 11px; color: var(--tm); white-space: nowrap;
+    }
+
     .pill {
       display: inline-flex; align-items: center; gap: 6px;
       background: var(--ac4); border: 1px solid var(--ac);
@@ -262,6 +300,29 @@
     .btn-primary:hover { background: var(--ac2); }
     .btn:disabled { opacity: .4; cursor: not-allowed; }
 
+    /* ── Hotkey Rows ── */
+    .hk-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 0; border-bottom: 1px solid var(--bdr);
+    }
+    .hk-row:last-of-type { border-bottom: none; }
+    .hk-row:first-of-type { padding-top: 0; }
+    .hk-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: var(--bg3); border: 1px solid var(--bdr);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      color: var(--ts);
+    }
+    .hk-icon svg { width: 16px; height: 16px; }
+    .hk-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .hk-name { font-size: 13px; font-weight: 500; color: var(--tp); }
+    .hk-desc { font-size: 12px; color: var(--ts); }
+    .hk-bind-area { flex-shrink: 0; width: 175px; }
+    .hk-bind-area .key-capture { padding: 7px 12px; min-height: 36px; font-size: 12px; }
+    .hk-bind-area .key-capture-hint { font-size: 11px; }
+    .hk-bind-area .key-badge { font-size: 11px; padding: 2px 7px; }
+
+
     /* ── Mixer ── */
     .mixer-row {
       background: var(--bg0); border: 1px solid var(--bdr); border-radius: 8px;
@@ -311,6 +372,28 @@
     .mx-ticks { display: flex; justify-content: space-between; padding: 0 5px; margin-top: -6px; }
     .tick { font-size: 9px; color: var(--tm); position: relative; width: 20px; text-align: center; }
     .tick::before { content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 1px; height: 4px; background: var(--tm); }
+
+    /* ── Mixer Keybind ── */
+    .mx-keybind {
+      display: flex; align-items: center; gap: 5px; margin-top: 2px;
+      cursor: pointer; padding: 3px 6px; border-radius: 5px;
+      background: transparent; border: 1px dashed transparent;
+      transition: all .15s;
+    }
+    .mx-keybind:hover { border-color: var(--tm); background: var(--bg3); }
+    .mx-keybind.capturing { border-color: var(--ac); background: var(--ac4); animation: kc-pulse .8s ease-in-out infinite alternate; }
+    .mx-keybind-key {
+      font-size: 10px; font-weight: 600; color: var(--ac3);
+      font-family: 'SF Mono','Consolas',monospace; letter-spacing: 0.03em;
+    }
+    .mx-keybind-key.empty { color: var(--tm); font-weight: 400; }
+    .mx-keybind svg { width: 10px; height: 10px; stroke: var(--tm); flex-shrink: 0; }
+    .mx-kb-clear {
+      font-size: 12px; font-weight: 700; line-height: 1;
+      color: var(--tm); cursor: pointer; padding: 0 1px;
+      transition: color .15s;
+    }
+    .mx-kb-clear:hover { color: var(--danger); }
 
     .mobile-status {
       display: none;
@@ -447,19 +530,51 @@
 
         <!-- HOTKEYS -->
         <div class="section">
-          <div class="section-head"><span class="section-title">Controles (Hotkeys)</span></div>
-          <div class="section-body">
-            <div class="field-row">
-              <div class="field">
-                <label>Mutear stream (OBS)</label>
-                <input type="text" id="inp_hotkey_obs" value="F9">
+          <div class="section-head"><span class="section-title">Hotkeys Globales</span></div>
+          <div class="section-body" style="gap: 12px; padding-bottom: 16px;">
+
+            <div class="hk-row">
+              <div class="hk-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                  <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+                </svg>
               </div>
-              <div class="field">
-                <label>Mutear PC (local)</label>
-                <input type="text" id="inp_hotkey_pc" value="F10">
+              <div class="hk-info">
+                <span class="hk-name">Mutear Stream (OBS)</span>
+                <span class="hk-desc">Silencia todas las fuentes configuradas en OBS</span>
+              </div>
+              <div class="hk-bind-area">
+                <div class="key-capture" id="kc_obs" onclick="startCapture('obs')">
+                  <div class="key-chip" id="kc_obs_display"></div>
+                  <span class="key-capture-hint" id="kc_obs_hint">Clic para asignar</span>
+                </div>
+                <input type="hidden" id="inp_hotkey_obs" value="f9">
               </div>
             </div>
-            <p class="hint">Ejecuta LordxMute como <b>Administrador</b> en Windows para que estos atajos funcionen dentro de juegos a pantalla completa.</p>
+
+            <div class="hk-row">
+              <div class="hk-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2"/>
+                  <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+              </div>
+              <div class="hk-info">
+                <span class="hk-name">Mutear PC (Local)</span>
+                <span class="hk-desc">Silencia las aplicaciones Windows configuradas abajo</span>
+              </div>
+              <div class="hk-bind-area">
+                <div class="key-capture" id="kc_pc" onclick="startCapture('pc')">
+                  <div class="key-chip" id="kc_pc_display"></div>
+                  <span class="key-capture-hint" id="kc_pc_hint">Clic para asignar</span>
+                </div>
+                <input type="hidden" id="inp_hotkey_pc" value="f10">
+              </div>
+            </div>
+
+            <p class="hint" style="font-size:11px; margin:0;">⚠ Ejecuta LordxMute como <b>Administrador</b> para que los hotkeys funcionen en juegos a pantalla completa.</p>
+
           </div>
         </div>
 
@@ -514,8 +629,14 @@
                 <input type="password" id="inp_obs_password" placeholder="dejar vacío si no tiene" autocomplete="off">
               </div>
               <div class="field">
-                <label>Nombres exactos de las fuentes a mutear:</label>
+                <label>Fuentes a mutear (al activar hotkey OBS):</label>
                 <div class="pills" id="obsPills" style="margin-top:4px"></div>
+                <div id="addObsUI" style="display:none; margin-top:12px; align-items:center; gap:8px;">
+                  <input type="text" id="addObsInp" list="obsSources" placeholder="Selecciona o escribe el nombre exacto..." style="flex:1;">
+                  <button class="btn btn-primary" style="padding: 10px 16px;" onclick="confirmAddObs()">Añadir</button>
+                  <button class="btn btn-ghost" style="padding: 10px 16px;" onclick="cancelAddObs()">Cancelar</button>
+                </div>
+                <datalist id="obsSources"></datalist>
               </div>
             </div>
           </div>
@@ -527,10 +648,17 @@
           <div class="section-body" style="gap:0">
             <div class="toggle-row">
               <div class="toggle-info">
-                <span class="toggle-name">Círculo en bandeja del sistema</span>
-                <span class="toggle-desc">Indicador visual rojo/verde junto al reloj de Windows</span>
+                <span class="toggle-name">Abrir en el navegador automáticamente</span>
+                <span class="toggle-desc">Lanza el panel web al iniciar el programa</span>
               </div>
-              <div class="toggle on" id="trayToggle" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></div>
+              <div class="toggle on" id="browserToggle" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></div>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-name">Notificaciones de escritorio</span>
+                <span class="toggle-desc">Muestra un aviso nativo de Windows al mutear/desmutear</span>
+              </div>
+              <div class="toggle" id="notifyToggle" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></div>
             </div>
           </div>
         </div>
@@ -571,7 +699,7 @@
       <!-- ================= PÁGINA 3: ACERCA DE ================= -->
       <div id="page_about" class="page-content" style="display:none;">
         <div class="section">
-          <div class="section-head"><span class="section-title">LordxMute By Kitgg</span></div>
+          <div class="section-head"><span class="section-title">LordxMute By Juan "Kit" Camarena</span></div>
           <div class="section-body" style="align-items: center; text-align: center; padding: 40px 20px;">
             <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--ac); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 0 20px rgba(124,58,237,0.4);">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -733,9 +861,13 @@ async function refreshStatus() {
 
 // ─── Render config into UI ───────────────────────────────────────────────────
 function renderConfig() {
-  document.getElementById('inp_hotkey_obs').value = cfg.hotkey_obs || 'F9';
-  document.getElementById('inp_hotkey_pc').value  = cfg.hotkey_pc  || 'F10';
-  document.getElementById('muteKeyHint').textContent = cfg.hotkey_obs || 'F9';
+  const hkObs = cfg.hotkey_obs || 'f9';
+  const hkPc  = cfg.hotkey_pc  || 'f10';
+  document.getElementById('inp_hotkey_obs').value = hkObs;
+  document.getElementById('inp_hotkey_pc').value  = hkPc;
+  document.getElementById('muteKeyHint').textContent = hkObs.toUpperCase();
+  renderKeyBadges(hkObs, document.getElementById('kc_obs_display'));
+  renderKeyBadges(hkPc,  document.getElementById('kc_pc_display'));
 
   // Apps pills
   renderPills('appsPills', cfg.apps || [], (arr) => { cfg.apps = arr; });
@@ -760,8 +892,9 @@ function renderConfig() {
     cfg.obs.sources_to_mute = arr;
   });
 
-  // Tray toggle
-  document.getElementById('trayToggle').classList.toggle('on', !!cfg.show_tray);
+  // Toggles
+  document.getElementById('browserToggle').classList.toggle('on', !!cfg.open_browser);
+  document.getElementById('notifyToggle').classList.toggle('on', !!cfg.notify_on_toggle);
 }
 
 // ─── Pills helper ────────────────────────────────────────────────────────────
@@ -780,6 +913,10 @@ function renderPills(containerId, items, onChange) {
   add.onclick = () => {
     if (containerId === 'appsPills') {
        showAddAppUI();
+       return;
+    }
+    if (containerId === 'obsPills') {
+       showAddObsUI();
        return;
     }
     const name = window.prompt('Nombre de la fuente en OBS:');
@@ -821,6 +958,43 @@ function cancelAddApp() {
   document.getElementById('addAppUI').style.display = 'none';
 }
 
+// ─── Add OBS Source with Autocomplete ────────────────────────────────────────
+async function fetchObsSources() {
+  try {
+    const r = await fetch(`${API}/api/status`);
+    if (!r.ok) return;
+    const s = await r.json();
+    const sources = Object.keys(s.obs_sources || {});
+    const dl = document.getElementById('obsSources');
+    if (dl) dl.innerHTML = sources.map(src => `<option value="${src}">`).join('');
+  } catch {}
+}
+
+function showAddObsUI() {
+  document.getElementById('addObsUI').style.display = 'flex';
+  document.getElementById('addObsInp').value = '';
+  document.getElementById('addObsInp').focus();
+  fetchObsSources();
+}
+
+function cancelAddObs() {
+  document.getElementById('addObsUI').style.display = 'none';
+}
+
+function confirmAddObs() {
+  const inp = document.getElementById('addObsInp');
+  const name = inp.value.trim();
+  if (name) {
+    if (!cfg.obs) cfg.obs = {};
+    if (!cfg.obs.sources_to_mute) cfg.obs.sources_to_mute = [];
+    if (!cfg.obs.sources_to_mute.includes(name)) {
+      cfg.obs.sources_to_mute.push(name);
+      renderPills('obsPills', cfg.obs.sources_to_mute, (arr) => { cfg.obs.sources_to_mute = arr; });
+    }
+    cancelAddObs();
+  }
+}
+
 function confirmAddApp() {
   const inp = document.getElementById('addAppInp');
   const name = inp.value;
@@ -843,16 +1017,121 @@ function removePill(containerId, idx) {
   }
 }
 
+// ─── Key Capture ─────────────────────────────────────────────────────────────
+let _captureTarget = null;
+
+// Convierte un key combo a formato python-keyboard: "ctrl+shift+f9"
+function keyToPython(e) {
+  const IGNORED = ['Control','Shift','Alt','Meta','CapsLock','NumLock','ScrollLock'];
+  if (IGNORED.includes(e.key)) return null;
+
+  const parts = [];
+  if (e.ctrlKey)  parts.push('ctrl');
+  if (e.shiftKey) parts.push('shift');
+  if (e.altKey)   parts.push('alt');
+
+  // Normalizar nombre de tecla al formato que entiende python-keyboard
+  let key = e.key;
+  if (key === ' ') key = 'space';
+  else if (key === 'ArrowUp')    key = 'up';
+  else if (key === 'ArrowDown')  key = 'down';
+  else if (key === 'ArrowLeft')  key = 'left';
+  else if (key === 'ArrowRight') key = 'right';
+  else if (key === 'Enter')      key = 'enter';
+  else if (key === 'Escape')     key = 'esc';
+  else if (key === 'Backspace')  key = 'backspace';
+  else if (key === 'Delete')     key = 'delete';
+  else if (key === 'Tab')        key = 'tab';
+  else if (key === 'Insert')     key = 'insert';
+  else if (key === 'Home')       key = 'home';
+  else if (key === 'End')        key = 'end';
+  else if (key === 'PageUp')     key = 'page up';
+  else if (key === 'PageDown')   key = 'page down';
+  // Fn keys already come as 'F9', 'F10', etc. — lowercase them
+  else key = key.toLowerCase();
+
+  parts.push(key);
+  return parts.join('+');
+}
+
+// Renderiza un string como "ctrl+shift+f9" en badges visuales
+function renderKeyBadges(pyStr, chipEl) {
+  chipEl.innerHTML = '';
+  if (!pyStr) return;
+  const parts = pyStr.split('+');
+  parts.forEach((p, i) => {
+    const badge = document.createElement('span');
+    badge.className = 'key-badge';
+    badge.textContent = p.charAt(0).toUpperCase() + p.slice(1);
+    chipEl.appendChild(badge);
+    if (i < parts.length - 1) {
+      const sep = document.createElement('span');
+      sep.className = 'key-badge-sep';
+      sep.textContent = '+';
+      chipEl.appendChild(sep);
+    }
+  });
+}
+
+function startCapture(which) {
+  // Si ya hay otro capturando, cancelarlo primero
+  if (_captureTarget) stopCapture(true);
+
+  _captureTarget = which;
+  const kcEl   = document.getElementById(`kc_${which}`);
+  const hintEl = document.getElementById(`kc_${which}_hint`);
+  kcEl.classList.add('listening');
+  hintEl.textContent = '⌨ Presiona la tecla...';
+
+  function onKey(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const combo = keyToPython(e);
+    if (!combo) return; // tecla modificadora sola, ignorar
+
+    // Guardar en input oculto
+    document.getElementById(`inp_hotkey_${which}`).value = combo;
+    // Renderizar badges
+    renderKeyBadges(combo, document.getElementById(`kc_${which}_display`));
+    stopCapture(false);
+  }
+
+  function onClickOutside(ev) {
+    if (!kcEl.contains(ev.target)) stopCapture(true);
+  }
+
+  kcEl._onKey = onKey;
+  kcEl._onClickOutside = onClickOutside;
+  document.addEventListener('keydown', onKey, true);
+  setTimeout(() => document.addEventListener('click', onClickOutside), 50);
+}
+
+function stopCapture(cancelled) {
+  if (!_captureTarget) return;
+  const which  = _captureTarget;
+  _captureTarget = null;
+
+  const kcEl   = document.getElementById(`kc_${which}`);
+  const hintEl = document.getElementById(`kc_${which}_hint`);
+  if (kcEl) {
+    kcEl.classList.remove('listening');
+    document.removeEventListener('keydown', kcEl._onKey, true);
+    document.removeEventListener('click',   kcEl._onClickOutside);
+    hintEl.textContent = 'Clic para cambiar';
+  }
+}
+
 // ─── Save config ──────────────────────────────────────────────────────────────
 async function saveConfig() {
-  cfg.hotkey_obs = document.getElementById('inp_hotkey_obs').value.trim() || 'F9';
+  cfg.hotkey_obs = document.getElementById('inp_hotkey_obs').value.trim() || 'f9';
   cfg.hotkey_pc  = document.getElementById('inp_hotkey_pc').value.trim()  || 'F10';
   if (!cfg.obs) cfg.obs = {};
   cfg.obs.enabled  = obsOn;
   cfg.obs.host     = document.getElementById('inp_obs_host').value.trim()     || 'localhost';
   cfg.obs.port     = parseInt(document.getElementById('inp_obs_port').value)  || 4455;
   cfg.obs.password = document.getElementById('inp_obs_password').value;
-  cfg.show_tray    = document.getElementById('trayToggle').classList.contains('on');
+  cfg.open_browser = document.getElementById('browserToggle').classList.contains('on');
+  cfg.notify_on_toggle = document.getElementById('notifyToggle').classList.contains('on');
 
   document.getElementById('btnSave').disabled = true;
   document.getElementById('btnSave').textContent = 'Guardando...';
@@ -1042,6 +1321,10 @@ function renderMixer(appsData) {
             <div class="mx-mute ${data.muted ? 'active' : ''}" id="mx_mute_${safeId}" onclick="appMute('${app}', !this.classList.contains('active'))">
               ${data.muted ? SVG_MUTED : '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>'}
             </div>
+            <div class="mx-keybind" id="mx_kb_${safeId}" onclick="startMixerCapture('${app}','${safeId}','local')" title="Asignar tecla de mute">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 8h.01M12 8h.01M17 8h.01M7 12h.01M12 12h.01M17 12h.01M7 16h10"/></svg>
+              <span class="mx-keybind-key empty" id="mx_kb_label_${safeId}">bind</span>
+            </div>
           </div>
           <div class="mx-right">
              <div class="vol-wrapper">
@@ -1065,6 +1348,8 @@ function renderMixer(appsData) {
         </div>
       `;
       container.insertAdjacentHTML('beforeend', rowHTML);
+      // Render keybind badge for this row after insertion
+      refreshMixerKeybindBadge(app, safeId, 'local');
     }
     
     // Physics targets
@@ -1159,6 +1444,10 @@ function renderObsMixer(sourcesData) {
             <div class="mx-mute ${data.muted ? 'active' : ''}" id="obs_mx_mute_${safeId}" onclick="obsMute('${src}', !this.classList.contains('active'))">
               ${data.muted ? SVG_MUTED : '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>'}
             </div>
+            <div class="mx-keybind" id="obs_mx_kb_${safeId}" onclick="startMixerCapture('${src}','${safeId}','obs')" title="Asignar tecla de mute">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 8h.01M12 8h.01M17 8h.01M7 12h.01M12 12h.01M17 12h.01M7 16h10"/></svg>
+              <span class="mx-keybind-key empty" id="obs_mx_kb_label_${safeId}">bind</span>
+            </div>
           </div>
           <div class="mx-right">
              <div class="vol-wrapper" style="opacity: 0.8;">
@@ -1182,6 +1471,7 @@ function renderObsMixer(sourcesData) {
         </div>
       `;
       container.insertAdjacentHTML('beforeend', rowHTML);
+      refreshMixerKeybindBadge(src, safeId, 'obs');
     } else {
       const fill = document.getElementById(`obs_mx_fill_${safeId}`);
       if (fill && !isDraggingObsSlider) {
@@ -1244,9 +1534,176 @@ async function obsMute(src, mute) {
   } catch {}
 }
 
+// ─── Mixer Keybinds ──────────────────────────────────────────────────────────
+// mixer_hotkeys: { "local:Discord.exe": "ctrl+m", "obs:Desktop Audio": "ctrl+d" }
+let _mxCapture = null; // { name, safeId, type }
+let _mxKeyListeners = {}; // { combo: handlerFn }
+
+function mixerHotkeys() {
+  return cfg.mixer_hotkeys || {};
+}
+
+function refreshMixerKeybindBadge(name, safeId, type) {
+  const key = `${type}:${name}`;
+  const combo = mixerHotkeys()[key];
+  const prefix = type === 'obs' ? 'obs_' : '';
+  const labelEl = document.getElementById(`${prefix}mx_kb_label_${safeId}`);
+  const btnEl   = document.getElementById(`${prefix}mx_kb_${safeId}`);
+  if (!labelEl) return;
+  if (combo) {
+    labelEl.textContent = combo.split('+').map(p => p.charAt(0).toUpperCase()+p.slice(1)).join('+');
+    labelEl.classList.remove('empty');
+    // Add × button if not already there
+    let xBtn = btnEl && btnEl.querySelector('.mx-kb-clear');
+    if (!xBtn && btnEl) {
+      xBtn = document.createElement('span');
+      xBtn.className = 'mx-kb-clear';
+      xBtn.textContent = '×';
+      xBtn.title = 'Quitar keybind';
+      xBtn.onclick = (e) => { e.stopPropagation(); clearMixerKeybind(name, safeId, type); };
+      btnEl.appendChild(xBtn);
+    }
+  } else {
+    labelEl.textContent = 'bind';
+    labelEl.classList.add('empty');
+    // Remove × button if present
+    const xBtn = btnEl && btnEl.querySelector('.mx-kb-clear');
+    if (xBtn) xBtn.remove();
+  }
+}
+
+function clearMixerKeybind(name, safeId, type) {
+  const key = `${type}:${name}`;
+  if (cfg.mixer_hotkeys) delete cfg.mixer_hotkeys[key];
+  // Remove browser listener for this combo
+  rebindMixerHotkeys();
+  refreshMixerKeybindBadge(name, safeId, type);
+  saveMixerHotkeys();
+  showToast('Keybind eliminado', '');
+}
+
+function startMixerCapture(name, safeId, type) {
+  // Stop any other capture first
+  if (_captureTarget) stopCapture(true);
+  if (_mxCapture) stopMixerCapture(true);
+
+  _mxCapture = { name, safeId, type };
+  const prefix = type === 'obs' ? 'obs_' : '';
+  const btnEl = document.getElementById(`${prefix}mx_kb_${safeId}`);
+  if (btnEl) btnEl.classList.add('capturing');
+
+  const labelEl = document.getElementById(`${prefix}mx_kb_label_${safeId}`);
+  if (labelEl) { labelEl.textContent = '...'; labelEl.classList.remove('empty'); }
+
+  function onKey(e) {
+    // Allow Escape to cancel
+    if (e.key === 'Escape') { stopMixerCapture(true); return; }
+    const combo = keyToPython(e);
+    if (!combo) return;
+    e.preventDefault(); e.stopPropagation();
+
+    // Save into cfg
+    if (!cfg.mixer_hotkeys) cfg.mixer_hotkeys = {};
+    const key = `${type}:${name}`;
+
+    // Check for duplicate
+    const existing = Object.entries(cfg.mixer_hotkeys).find(([k, v]) => v === combo && k !== key);
+    if (existing) {
+      showToast(`⚠ "${combo}" ya está asignado a otro canal`, 'err');
+      stopMixerCapture(true);
+      return;
+    }
+
+    cfg.mixer_hotkeys[key] = combo;
+    stopMixerCapture(false);
+    refreshMixerKeybindBadge(name, safeId, type);
+    rebindMixerHotkeys();
+    // Save to backend silently
+    saveMixerHotkeys();
+  }
+
+  function onClickOutside(ev) {
+    const el = document.getElementById(`${prefix}mx_kb_${safeId}`);
+    if (el && !el.contains(ev.target)) stopMixerCapture(true);
+  }
+
+  _mxCapture._onKey = onKey;
+  _mxCapture._onClickOutside = onClickOutside;
+  document.addEventListener('keydown', onKey, true);
+  setTimeout(() => document.addEventListener('click', onClickOutside), 50);
+}
+
+function stopMixerCapture(cancelled) {
+  if (!_mxCapture) return;
+  const { name, safeId, type } = _mxCapture;
+  document.removeEventListener('keydown', _mxCapture._onKey, true);
+  document.removeEventListener('click', _mxCapture._onClickOutside);
+  _mxCapture = null;
+
+  const prefix = type === 'obs' ? 'obs_' : '';
+  const btnEl = document.getElementById(`${prefix}mx_kb_${safeId}`);
+  if (btnEl) btnEl.classList.remove('capturing');
+
+  if (cancelled) refreshMixerKeybindBadge(name, safeId, type);
+}
+
+function rebindMixerHotkeys() {
+  // Remove previous listeners
+  for (const [combo, fn] of Object.entries(_mxKeyListeners)) {
+    document.removeEventListener('keydown', fn, true);
+  }
+  _mxKeyListeners = {};
+
+  const hotkeys = mixerHotkeys();
+  for (const [key, combo] of Object.entries(hotkeys)) {
+    if (!combo) continue;
+    const [type, ...nameParts] = key.split(':');
+    const name = nameParts.join(':');
+    const fn = (e) => {
+      const pressed = keyToPython(e);
+      if (pressed !== combo) return;
+      e.preventDefault();
+      const safeId = name.replace(/[^a-z0-9]/gi, '_');
+      if (type === 'local') {
+        const btn = document.getElementById(`mx_mute_${safeId}`);
+        const muted = btn ? btn.classList.contains('active') : false;
+        appMute(name, !muted);
+      } else {
+        const btn = document.getElementById(`obs_mx_mute_${safeId}`);
+        const muted = btn ? btn.classList.contains('active') : false;
+        obsMute(name, !muted);
+      }
+    };
+    _mxKeyListeners[combo] = fn;
+    document.addEventListener('keydown', fn, true);
+  }
+}
+
+async function saveMixerHotkeys() {
+  try {
+    await fetch(`${API}/api/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    });
+  } catch {}
+}
+
+function loadMixerHotkeys() {
+  const hotkeys = mixerHotkeys();
+  // Refresh badges for any already-rendered rows
+  for (const [key] of Object.entries(hotkeys)) {
+    const [type, ...nameParts] = key.split(':');
+    const name = nameParts.join(':');
+    const safeId = name.replace(/[^a-z0-9]/gi, '_');
+    refreshMixerKeybindBadge(name, safeId, type);
+  }
+  rebindMixerHotkeys();
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 connectWS();
-loadConfig();
+loadConfig().then(() => loadMixerHotkeys());
 // Fetch available processes for datalist early
 fetchProcesses();
 // Poll status every 5s to keep live app dots fresh

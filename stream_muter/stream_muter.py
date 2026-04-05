@@ -15,12 +15,12 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import asyncio
 import websockets
 
-# ─── Agrupar consola en la taskbar ─────────────────────────────────────────
-APP_ID = "Lormute.StreamMuter.1"
+# ─── Notificaciones (win10toast) ──────────────────────────────────────────
 try:
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
-except Exception:
-    pass
+    from win10toast import ToastNotifier
+    toaster = ToastNotifier()
+except ImportError:
+    toaster = None
 
 # ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────
 if getattr(sys, 'frozen', False):
@@ -32,8 +32,8 @@ CONFIG_FILE = os.path.join(app_dir, "config.json")
 API_PORT    = 6767
 
 DEFAULT_CONFIG = {
-    "hotkey_obs": "F9",
-    "hotkey_pc": "F10",
+    "hotkey_obs": "f9",
+    "hotkey_pc": "f10",
     "apps": [
         "Spotify.exe",
         "VALORANT-Win64-Shipping.exe"
@@ -45,8 +45,10 @@ DEFAULT_CONFIG = {
         "password": "",
         "sources_to_mute": []
     },
-    "show_tray": True,
-    "notify_on_toggle": False
+    "show_tray": False,
+    "notify_on_toggle": False,
+    "mixer_hotkeys": {},
+    "open_browser": True
 }
 
 
@@ -143,51 +145,6 @@ class OBSController:
                 self.client.disconnect()
             except Exception:
                 pass
-
-
-# ─── TRAY ICON ──────────────────────────────────────────────────────────────
-def create_tray_icon(app_state):
-    try:
-        import pystray
-        from PIL import Image, ImageDraw
-
-        def make_icon(muted_obs, muted_pc):
-            img  = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-            draw = ImageDraw.Draw(img)
-            if muted_obs and muted_pc:
-                color = "#e74c3c"
-            elif muted_obs or muted_pc:
-                color = "#f39c12"
-            else:
-                color = "#2ecc71"
-            draw.ellipse([4, 4, 60, 60], fill=color)
-            if muted_obs or muted_pc:
-                draw.line([20, 20, 44, 44], fill="white", width=5)
-                draw.line([44, 20, 20, 44], fill="white", width=5)
-            else:
-                draw.polygon([(22, 18), (22, 46), (46, 32)], fill="white")
-            return img
-
-        def on_toggle_obs(icon, item): app_state["toggle_obs"]()
-        def on_toggle_pc(icon, item):  app_state["toggle_pc"]()
-        def on_quit(icon, item):
-            icon.stop()
-            os._exit(0)
-
-        icon = pystray.Icon(
-            "StreamMuter", make_icon(False, False), "StreamMuter",
-            pystray.Menu(
-                pystray.MenuItem("Mute OBS (Stream)", on_toggle_obs),
-                pystray.MenuItem("Mute PC (Local)",   on_toggle_pc),
-                pystray.MenuItem("Salir",              on_quit),
-            )
-        )
-        app_state["tray_icon"] = icon
-        app_state["make_icon"] = make_icon
-        icon.run()
-
-    except ImportError:
-        print("[StreamMuter] pystray/Pillow no instalados. Sin ícono de bandeja.")
 
 
 # ─── API SERVER (HTTP + WebSocket) ──────────────────────────────────────────
@@ -330,6 +287,17 @@ class APIHandler(BaseHTTPRequestHandler):
             m.config.update(new_cfg)
             save_config(m.config)
 
+            # Re-registrar hotkeys si cambiaron
+            try:
+                import keyboard as kb
+                kb.unhook_all_hotkeys()
+                kb.add_hotkey(m.config.get("hotkey_obs", "f9"),  m.toggle_obs, suppress=False)
+                kb.add_hotkey(m.config.get("hotkey_pc",  "f10"), m.toggle_pc,  suppress=False)
+                register_mixer_hotkeys(m.config.get("mixer_hotkeys", {}), m)
+                print(f"[API] Hotkeys re-registrados: OBS={m.config.get('hotkey_obs')} PC={m.config.get('hotkey_pc')}")
+            except Exception as e:
+                print(f"[API] Error re-registrando hotkeys: {e}")
+
             # Reconectar OBS si cambió
             if m.config["obs"]["enabled"]:
                 if m.obs_ctrl:
@@ -345,6 +313,7 @@ class APIHandler(BaseHTTPRequestHandler):
                     m.obs_ctrl.disconnect()
                 m.obs_ctrl = None
 
+            m.draw_console()
             print("[API] Config guardada")
             ws_broadcast({"event": "config_saved"})
             self._json(200, {"ok": True})
@@ -503,6 +472,62 @@ def start_api_server(muter):
     threading.Thread(target=run_ws, daemon=True).start()
 
 
+# ─── MIXER HOTKEYS INDIVIDUALES ────────────────────────────────────────────
+def register_mixer_hotkeys(mixer_hotkeys: dict, muter):
+    """Registra hotkeys individuales para mutear cada canal del mixer."""
+    import keyboard as kb
+    for key, combo in mixer_hotkeys.items():
+        if not combo:
+            continue
+        try:
+            # key format: "local:Discord.exe" or "obs:Desktop Audio"
+            channel_type, channel_name = key.split(':', 1)
+        except ValueError:
+            continue
+
+        def make_handler(ctype, cname, m, combo_str):
+            def handler():
+                with m.console_lock:
+                    print(f"[Hotkey] Ejecutando {combo_str} → {ctype}:{cname}")
+                try:
+                    if ctype == 'local':
+                        # Para pycaw/COM en hilos nuevos
+                        try:
+                            import comtypes
+                            comtypes.CoInitialize()
+                        except: pass
+                        
+                        sessions = get_sessions_for_app(cname)
+                        if sessions:
+                            vol = sessions[0]._ctl.QueryInterface(ISimpleAudioVolume)
+                            is_muted = vol.GetMute()
+                            for s in sessions:
+                                try:
+                                    s._ctl.QueryInterface(ISimpleAudioVolume).SetMute(not is_muted, None)
+                                except: pass
+                            m.draw_console()
+                            # Notificar
+                            m.show_notification(cname, "Silenciado" if not is_muted else "Activado")
+                    elif ctype == 'obs':
+                        if m.obs_ctrl and m.obs_ctrl.client:
+                            # Toggle mute
+                            res = m.obs_ctrl.client.get_input_mute(cname)
+                            is_muted = res.input_muted
+                            m.obs_ctrl.client.set_input_mute(cname, not is_muted)
+                            m.draw_console()
+                            # Notificar
+                            m.show_notification(cname, "Silenciado" if not is_muted else "Activado")
+                except Exception as e:
+                    print(f"[Hotkey] Error en handler: {e}")
+            return handler
+
+        try:
+            kb.add_hotkey(combo, make_handler(channel_type, channel_name, muter, combo), suppress=False)
+            print(f"[Hotkey] Registrado: {combo} → {key}")
+        except Exception as e:
+            print(f"[Hotkey] Error registrando '{combo}' para '{key}': {e}")
+
+
 # ─── LÓGICA PRINCIPAL ───────────────────────────────────────────────────────
 class StreamMuter:
     def get_local_ip(self):
@@ -517,36 +542,51 @@ class StreamMuter:
             return "127.0.0.1"
 
     def draw_console(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
-        hl_obs = "🔇 MUTEADO" if self.muted_obs else "🔊 ACTIVO  "
-        hl_pc  = "🔇 MUTEADO" if self.muted_pc else "🔊 ACTIVO  "
-        
-        local_ip = self.get_local_ip()
-        network_url = f"http://{local_ip}:{API_PORT}"
-        
-        print(f"[LordxMute] ✅ Iniciado - Panel Web: {network_url}")
-        print(f"─" * 60)
-        print(f" {self.config.get('hotkey_obs', 'F9'):<6} → OBS (Stream) : {hl_obs}")
-        print(f" {self.config.get('hotkey_pc', 'F10'):<6} → PC (Local)   : {hl_pc}")
-        print(f"─" * 60)
-        
-        try:
-            import qrcode
-            import io
-            qr = qrcode.QRCode(version=1, box_size=1, border=1)
-            qr.add_data(network_url)
-            qr.make(fit=True)
-            f = io.StringIO()
-            qr.print_ascii(out=f)
-            qr_lines = f.getvalue().split("\n")
-            # Omitting empty lines or lines with garbage
-            for line in qr_lines:
-                if "▄" in line or "▀" in line or "█" in line:
-                    print("   " + line)
-        except Exception:
-            pass
+        with self.console_lock:
+            os.system('cls' if os.name == 'nt' else 'clear')
+            hl_obs = "🔇 MUTEADO" if self.muted_obs else "🔊 ACTIVO  "
+            hl_pc  = "🔇 MUTEADO" if self.muted_pc else "🔊 ACTIVO  "
+            
+            local_ip = self.get_local_ip()
+            network_url = f"http://{local_ip}:{API_PORT}"
+            
+            print(f"[LordxMute] ✅ Iniciado - Panel Web: {network_url}")
+            print(f"─" * 60)
+            print(f" {self.config.get('hotkey_obs', 'f9'):<6} → OBS (Stream) : {hl_obs}")
+            print(f" {self.config.get('hotkey_pc',  'f10'):<6} → PC (Local)   : {hl_pc}")
+            
+            # Mixer Hotkeys
+            mixer_keys = self.config.get("mixer_hotkeys", {})
+            if mixer_keys:
+                print(f"─" * 60)
+                for key, combo in mixer_keys.items():
+                    if combo:
+                        # key format "local:APP.exe" or "obs:SOURCE"
+                        try:
+                            ktype, kname = key.split(':', 1)
+                            display_name = f"{kname} ({ktype})"
+                            print(f" {combo:<6} → Mute {display_name[:34]:<34}")
+                        except: pass
+            
+            print(f"─" * 60)
+            
+            try:
+                import qrcode
+                import io
+                qr = qrcode.QRCode(version=1, box_size=1, border=1)
+                qr.add_data(network_url)
+                qr.make(fit=True)
+                f = io.StringIO()
+                qr.print_ascii(out=f)
+                qr_lines = f.getvalue().split("\n")
+                # Omitting empty lines or lines with garbage
+                for line in qr_lines:
+                    if "▄" in line or "▀" in line or "█" in line:
+                        print("   " + line)
+            except Exception:
+                pass
 
-        print(f"\nPresiona Ctrl+C para salir.")
+            print(f"\nPresiona Ctrl+C para salir.")
 
     def __init__(self):
         self.config    = load_config()
@@ -554,8 +594,7 @@ class StreamMuter:
         self.muted_pc  = False
         self.running   = True
         self.obs_ctrl  = None
-        self.tray_icon = None
-        self.make_icon = None
+        self.console_lock = threading.Lock()
 
         if self.config["obs"]["enabled"]:
             self.obs_ctrl = OBSController(
@@ -566,8 +605,21 @@ class StreamMuter:
             self.obs_ctrl.connect()
 
     def _update_tray(self):
-        if self.tray_icon and self.make_icon:
-            self.tray_icon.icon = self.make_icon(self.muted_obs, self.muted_pc)
+        pass
+
+    def show_notification(self, title, message):
+        """Muestra una notificación nativa de Windows 10/11."""
+        if self.config.get("notify_on_toggle") and toaster:
+            try:
+                toaster.show_toast(
+                    title,
+                    message,
+                    duration=3,
+                    icon_path=None,
+                    threaded=True
+                )
+            except Exception as e:
+                print(f"[Notifier] Error: {e}")
 
     def toggle_obs(self):
         self.muted_obs = not self.muted_obs
@@ -577,6 +629,10 @@ class StreamMuter:
         self._update_tray()
         ws_broadcast({"event": "state", "muted_obs": self.muted_obs, "muted_pc": self.muted_pc})
         self.draw_console()
+        
+        # Notificar
+        state_text = "🔇 MUTEADO" if self.muted_obs else "🔊 ACTIVO"
+        self.show_notification("OBS Stream", f"Estado: {state_text}")
 
     def toggle_pc(self):
         self.muted_pc = not self.muted_pc
@@ -585,6 +641,10 @@ class StreamMuter:
         self._update_tray()
         ws_broadcast({"event": "state", "muted_obs": self.muted_obs, "muted_pc": self.muted_pc})
         self.draw_console()
+        
+        # Notificar
+        state_text = "🔇 MUTEADO" if self.muted_pc else "🔊 ACTIVO"
+        self.show_notification("PC local", f"Estado: {state_text}")
 
     def start(self):
         try:
@@ -604,17 +664,13 @@ class StreamMuter:
         # Hotkeys globales
         keyboard.add_hotkey(hotkey_obs, self.toggle_obs, suppress=False)
         keyboard.add_hotkey(hotkey_pc,  self.toggle_pc,  suppress=False)
+        register_mixer_hotkeys(self.config.get("mixer_hotkeys", {}), self)
 
-        # Tray icon
-        app_state = {"toggle_obs": self.toggle_obs, "toggle_pc": self.toggle_pc}
-        if self.config.get("show_tray"):
-            tray_thread = threading.Thread(target=create_tray_icon, args=(app_state,), daemon=True)
-            tray_thread.start()
-            def wait_for_tray():
-                time.sleep(0.5)
-                self.tray_icon = app_state.get("tray_icon")
-                self.make_icon = app_state.get("make_icon")
-            threading.Thread(target=wait_for_tray, daemon=True).start()
+        # Abrir navegador automáticamente si está habilitado
+        if self.config.get("open_browser"):
+            import webbrowser
+            local_ip = self.get_local_ip()
+            webbrowser.open(f"http://{local_ip}:{API_PORT}")
 
         try:
             keyboard.wait()
